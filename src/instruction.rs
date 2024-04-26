@@ -15,6 +15,8 @@ impl FromStr for Instruction {
     type Err = anyhow::Error;
 
     fn from_str(line: &str) -> Result<Self, Self::Err> {
+        use Instruction::*;
+
         let line = line.trim();
         let Some((cmd, rest)) = line.split_once(' ') else {
             bail!("Bad instruction: {}", line)
@@ -25,20 +27,19 @@ impl FromStr for Instruction {
         Ok(match cmd {
             "lbl" => {
                 ensure!(params.len() == 1, "Wrong number of parameters");
-                Instruction::Label(params[0].to_string())
+                Label(params[0].to_string())
             },
             "unk.i" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Instruction::Unki(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Unki(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
             }
             "unk.r" => {
                 ensure!(params.len() == 5, "Wrong number of parameters");
-                Instruction::Unkr(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?, params[4].parse()?)
+                Unkr(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?, params[4].parse()?)
             }
             "addi" => {
                 ensure!(params.len() == 3, "Wrong number of parameters");
-                Instruction::Addi(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-
+                Addi(params[0].parse()?, params[1].parse()?, params[2].parse()?)
             }
             &_ => bail!("Unknown instruction: {}", line)
         })
