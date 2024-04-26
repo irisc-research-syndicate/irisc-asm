@@ -64,7 +64,7 @@ impl Assembler {
     fn assemble(&mut self, source: &str) -> Result<(), anyhow::Error> {
         for line in source.lines() {
             let line = line.trim();
-            if line.starts_with("#") || line == "" {
+            if line.starts_with('#') || line.is_empty() {
                 continue;
             }
             line.parse::<Instruction>()?.assemble(self)?;

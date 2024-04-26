@@ -69,7 +69,7 @@ impl<const BITS: usize> FromStr for Uimm<BITS> {
         let number = if let Some(s) = s.strip_prefix("0x") {
             u32::from_str_radix(s, 16)
         } else {
-            u32::from_str_radix(s, 10)
+            s.parse()
         }.map_err(|_| ParseImmidiateError::InvalidNumber)?;
 
         Self::new(number)
@@ -111,7 +111,7 @@ impl<const BITS: usize> FromStr for Simm<BITS> {
         let number = if let Some(s) = s.strip_prefix("0x") {
             i32::from_str_radix(s, 16)
         } else {
-            i32::from_str_radix(s, 10)
+            s.parse()
         }.map_err(|_| ParseImmidiateError::InvalidNumber)?;
 
         let number = if is_negative { -number } else { number };
@@ -239,7 +239,7 @@ impl FromStr for Label {
 }
 
 impl Label {
-    fn lookup<Asm: Assembler>(&self, asm: Asm) -> Result<u32, Asm::Err> {
+    pub fn lookup<Asm: Assembler>(&self, asm: Asm) -> Result<u32, Asm::Err> {
         asm.lookup(&self.0)
     }
 }
