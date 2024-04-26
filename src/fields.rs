@@ -1,8 +1,20 @@
-use std::str::FromStr;
+use std::{convert::Infallible, str::FromStr};
 use thiserror::Error;
+
+use crate::instruction::Assembler;
 
 pub trait Bits {
     fn bits(&self) -> u32;
+}
+
+macro_rules! impl_bits_at_offset_inner {
+    ($structname:ty, $offset:expr) => {
+        impl Bits for $structname {
+            fn bits(&self) -> u32 {
+                self.0.bits() << $offset
+            }
+        }
+    }
 }
 
 pub struct Or<A: Bits, B: Bits>(A, B);
@@ -29,34 +41,6 @@ impl<A: Bits, B:Bits, Rhs: Bits> core::ops::BitOr<Rhs> for Or<A, B> {
     }
 }
 
-
-#[derive(Debug, Error)]
-pub enum ParseOpcodeError {
-    #[error("Failed to parse opcode number")]
-    ParseOpcodeError
-}
-
-pub struct Opcode(pub u32);
-
-impl FromStr for Opcode {
-    type Err = ParseOpcodeError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let number = if let Some(s) = s.strip_prefix("0x") {
-            u32::from_str_radix(s, 16)
-        } else {
-            u32::from_str_radix(s, 10)
-        }.map_err(|_| ParseOpcodeError::ParseOpcodeError)?;
-
-        Ok(Opcode(number))
-    }
-}
-
-impl Bits for Opcode {
-    fn bits(&self) -> u32 {
-        self.0 << 26
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum ParseImmidiateError {
     #[error("Failed to parse number")]
@@ -67,7 +51,16 @@ pub enum ParseImmidiateError {
 }
 
 pub struct Uimm<const BITS: usize>(u32);
-pub struct Simm<const BITS: usize>(i32);
+
+impl<const BITS: usize> Uimm<BITS> {
+    pub fn new(number: u32) -> Result<Self, ParseImmidiateError> {
+        if number >= (1 << BITS) {
+            return Err(ParseImmidiateError::OutOfRange);
+        }
+
+        Ok(Self(number))
+    }
+}
 
 impl<const BITS: usize> FromStr for Uimm<BITS> {
     type Err = ParseImmidiateError;
@@ -79,17 +72,29 @@ impl<const BITS: usize> FromStr for Uimm<BITS> {
             u32::from_str_radix(s, 10)
         }.map_err(|_| ParseImmidiateError::InvalidNumber)?;
 
-        if number >= (1 << BITS) {
-            return Err(ParseImmidiateError::OutOfRange);
-        }
-
-        Ok(Self(number))
+        Self::new(number)
     }
 }
 
 impl<const BITS: usize> Bits for Uimm<BITS> {
     fn bits(&self) -> u32 {
         self.0
+    }
+}
+
+pub struct Simm<const BITS: usize>(i32);
+
+impl<const BITS: usize> Simm<BITS> {
+    pub fn new(number: i32) -> Result<Self, ParseImmidiateError> {
+        if number < -(1 << (BITS - 1)) {
+            return Err(ParseImmidiateError::OutOfRange);
+        }
+
+        if number >= (1 << (BITS - 1)) {
+            return Err(ParseImmidiateError::OutOfRange);
+        }
+
+        Ok(Self(number & ((1 << BITS) - 1)))
     }
 }
 
@@ -111,15 +116,7 @@ impl<const BITS: usize> FromStr for Simm<BITS> {
 
         let number = if is_negative { -number } else { number };
 
-        if number < -(1 << (BITS - 1)) {
-            return Err(ParseImmidiateError::OutOfRange);
-        }
-
-        if number >= (1 << (BITS - 1)) {
-            return Err(ParseImmidiateError::OutOfRange);
-        }
-
-        Ok(Self(number & ((1 << BITS) - 1)))
+        Self::new(number)
     }
 }
 
@@ -128,6 +125,30 @@ impl<const BITS: usize> Bits for Simm<BITS> {
         self.0 as u32
     }
 }
+
+
+pub struct Opcode(pub Uimm<6>);
+
+impl Opcode {
+    pub fn new(number: u32) -> Result<Self, ParseImmidiateError> {
+        Ok(Self(Uimm::new(number)?))
+    }
+
+    pub fn fixed(number: u32) -> Self {
+        Self(Uimm(number))
+    }
+}
+
+impl FromStr for Opcode {
+    type Err = ParseImmidiateError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
+impl_bits_at_offset_inner!(Opcode, 26);
+
 
 #[derive(Debug, Error)]
 pub enum ParseRegisterError {
@@ -165,11 +186,8 @@ impl Bits for Reg {
     }
 }
 
-pub struct Rd(Reg);
-pub struct Rs(Reg);
-pub struct Rt(Reg);
 
-macro_rules! impl_register_bits {
+macro_rules! impl_register {
     ($structname:ty, $offset:expr) => {
         impl FromStr for $structname {
             type Err = ParseRegisterError;
@@ -179,14 +197,49 @@ macro_rules! impl_register_bits {
             }
         }
 
-        impl Bits for $structname {
-            fn bits(&self) -> u32 {
-                self.0.bits() << $offset
-            }
-        }
+        impl_bits_at_offset_inner! ($structname, $offset);
     }
 }
 
-impl_register_bits!(Rs, 21);
-impl_register_bits!(Rd, 16);
-impl_register_bits!(Rt, 11);
+
+pub struct Rd(Reg);
+impl_register!(Rs, 21);
+
+pub struct Rs(Reg);
+impl_register!(Rd, 16);
+
+pub struct Rt(Reg);
+impl_register!(Rt, 11);
+
+
+pub enum Jmpop {
+    Jump,
+    Call,
+}
+
+impl Bits for Jmpop {
+    fn bits(&self) -> u32 {
+        let bits = match *self {
+            Jmpop::Call => 0x0,
+            Jmpop::Jump => 0x1
+        };
+
+        bits << 24
+    }
+}
+
+pub struct Label(pub String);
+
+impl FromStr for Label {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Label(s.to_string()))
+    }
+}
+
+impl Label {
+    fn lookup<Asm: Assembler>(&self, asm: Asm) -> Result<u32, Asm::Err> {
+        asm.lookup(&self.0)
+    }
+}
