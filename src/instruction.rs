@@ -35,14 +35,25 @@ impl FromStr for Instruction {
             "lbl" => {
                 ensure!(params.len() == 1, "Wrong number of parameters");
                 Label(params[0].parse()?)
-            },
+            }
             "unk.i" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Unki(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Unki(
+                    params[0].parse()?,
+                    params[1].parse()?,
+                    params[2].parse()?,
+                    params[3].parse()?,
+                )
             }
             "unk.r" => {
                 ensure!(params.len() == 5, "Wrong number of parameters");
-                Unkr(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?, params[4].parse()?)
+                Unkr(
+                    params[0].parse()?,
+                    params[1].parse()?,
+                    params[2].parse()?,
+                    params[3].parse()?,
+                    params[4].parse()?,
+                )
             }
             "addi" => {
                 ensure!(params.len() == 3, "Wrong number of parameters");
@@ -56,10 +67,9 @@ impl FromStr for Instruction {
                 ensure!(params.len() == 1, "Wrong number of parameters");
                 Call(params[0].parse()?)
             }
-            &_ => bail!("Unknown instruction: {}", line)
+            &_ => bail!("Unknown instruction: {}", line),
         })
     }
-
 }
 
 pub trait Assembler {
@@ -73,7 +83,6 @@ pub trait Assembler {
 
     fn emit(&mut self, bits: impl Bits) -> Result<(), Self::Err>;
 }
-
 
 impl Instruction {
     pub fn assemble<Asm: Assembler>(self, asm: &mut Asm) -> Result<(), Asm::Err> {
@@ -89,11 +98,11 @@ impl Instruction {
             JumpInst(jmpop, lbl) => {
                 let offset: i32 = (asm.lookup(&lbl.0)? as i32 - asm.current_address() as i32) >> 2;
                 asm.emit(Opcode::fixed(0x25) | jmpop | Simm::<24>::new(offset).unwrap())?;
-            },
+            }
             Set0(rd, rs, uimm) => asm.emit(Opcode::fixed(0x06) | rd | rs | uimm)?,
             Set1(rd, rs, uimm) => asm.emit(Opcode::fixed(0x07) | rd | rs | uimm)?,
             Set3(rd, rs, uimm) => asm.emit(Opcode::fixed(0x08) | rd | rs | uimm)?,
-            Set2(rd, rs, uimm) => asm.emit(Opcode::fixed(0x09) | rd | rs | uimm)?
+            Set2(rd, rs, uimm) => asm.emit(Opcode::fixed(0x09) | rd | rs | uimm)?,
         }
 
         Ok(())

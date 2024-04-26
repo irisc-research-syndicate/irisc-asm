@@ -14,7 +14,7 @@ macro_rules! impl_bits_at_offset_inner {
                 self.0.bits() << $offset
             }
         }
-    }
+    };
 }
 
 pub struct Or<A: Bits, B: Bits>(A, B);
@@ -33,7 +33,7 @@ impl<Rhs: Bits> core::ops::BitOr<Rhs> for Opcode {
     }
 }
 
-impl<A: Bits, B:Bits, Rhs: Bits> core::ops::BitOr<Rhs> for Or<A, B> {
+impl<A: Bits, B: Bits, Rhs: Bits> core::ops::BitOr<Rhs> for Or<A, B> {
     type Output = Or<Or<A, B>, Rhs>;
 
     fn bitor(self, rhs: Rhs) -> Self::Output {
@@ -47,7 +47,7 @@ pub enum ParseImmidiateError {
     InvalidNumber,
 
     #[error("Immidiate out of range")]
-    OutOfRange
+    OutOfRange,
 }
 
 pub struct Uimm<const BITS: usize>(u32);
@@ -70,7 +70,8 @@ impl<const BITS: usize> FromStr for Uimm<BITS> {
             u32::from_str_radix(s, 16)
         } else {
             s.parse()
-        }.map_err(|_| ParseImmidiateError::InvalidNumber)?;
+        }
+        .map_err(|_| ParseImmidiateError::InvalidNumber)?;
 
         Self::new(number)
     }
@@ -112,7 +113,8 @@ impl<const BITS: usize> FromStr for Simm<BITS> {
             i32::from_str_radix(s, 16)
         } else {
             s.parse()
-        }.map_err(|_| ParseImmidiateError::InvalidNumber)?;
+        }
+        .map_err(|_| ParseImmidiateError::InvalidNumber)?;
 
         let number = if is_negative { -number } else { number };
 
@@ -125,7 +127,6 @@ impl<const BITS: usize> Bits for Simm<BITS> {
         self.0 as u32
     }
 }
-
 
 pub struct Opcode(pub Uimm<6>);
 
@@ -149,11 +150,10 @@ impl FromStr for Opcode {
 
 impl_bits_at_offset_inner!(Opcode, 26);
 
-
 #[derive(Debug, Error)]
 pub enum ParseRegisterError {
     #[error("Invalid Register")]
-    InvalidRegister
+    InvalidRegister,
 }
 
 pub struct Reg(u32);
@@ -171,7 +171,9 @@ impl FromStr for Reg {
             return Err(ParseRegisterError::InvalidRegister);
         }
 
-        let num: u32 = rest.parse().map_err(|_| ParseRegisterError::InvalidRegister)?;
+        let num: u32 = rest
+            .parse()
+            .map_err(|_| ParseRegisterError::InvalidRegister)?;
         if num > 31 {
             return Err(ParseRegisterError::InvalidRegister);
         }
@@ -186,7 +188,6 @@ impl Bits for Reg {
     }
 }
 
-
 macro_rules! impl_register {
     ($structname:ty, $offset:expr) => {
         impl FromStr for $structname {
@@ -197,10 +198,9 @@ macro_rules! impl_register {
             }
         }
 
-        impl_bits_at_offset_inner! ($structname, $offset);
-    }
+        impl_bits_at_offset_inner!($structname, $offset);
+    };
 }
-
 
 pub struct Rd(Reg);
 impl_register!(Rs, 21);
@@ -211,7 +211,6 @@ impl_register!(Rd, 16);
 pub struct Rt(Reg);
 impl_register!(Rt, 11);
 
-
 pub enum Jmpop {
     Jump,
     Call,
@@ -221,7 +220,7 @@ impl Bits for Jmpop {
     fn bits(&self) -> u32 {
         let bits = match *self {
             Jmpop::Call => 0x0,
-            Jmpop::Jump => 0x1
+            Jmpop::Jump => 0x1,
         };
 
         bits << 24
