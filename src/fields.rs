@@ -250,3 +250,108 @@ impl Label {
         asm.lookup(&self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_uimm() {
+        assert_eq!("0x00".parse::<Uimm<8>>(), Ok(Uimm(0)));
+        assert_eq!("10".parse::<Uimm<8>>(), Ok(Uimm(10)));
+        assert_eq!("255".parse::<Uimm<8>>(), Ok(Uimm(255)));
+        assert_eq!("256".parse::<Uimm<8>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("-10".parse::<Uimm<8>>(), Err(ParseImmidiateError::InvalidNumber));
+        assert_eq!("0x1ffff".parse::<Uimm<17>>(), Ok(Uimm(0x1ffff)));
+    }
+
+    #[test]
+    fn bits_uimm(){
+        assert_eq!(Uimm::<11>(10).bits(), 10u32);
+        assert_eq!(Uimm::<11>(0x7ff).bits(), 0x7ffu32);
+        assert_eq!(Uimm::<11>(0xfff).bits(), 0x7ffu32);
+    }
+
+    #[test]
+    fn parse_simm() {
+        assert_eq!("0x00".parse::<Simm<8>>(), Ok(Simm(0)));
+        assert_eq!("10".parse::<Simm<8>>(), Ok(Simm(10)));
+        assert_eq!("255".parse::<Simm<8>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("256".parse::<Simm<8>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("-10".parse::<Simm<8>>(), Ok(Simm(-10)));
+        assert_eq!("0x1ffff".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("0xffff".parse::<Simm<17>>(), Ok(Simm(0xffff)));
+        assert_eq!("0x10000".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("-0x10000".parse::<Simm<17>>(), Ok(Simm(-0x10000)));
+        assert_eq!("-0x10001".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+    }
+
+    #[test]
+    fn bits_simm(){
+        assert_eq!(Simm::<11>(10).bits(), 10u32);
+        assert_eq!(Simm::<11>(0x7ff).bits(), 0x7ffu32);
+        assert_eq!(Simm::<11>(-10).bits(), 0x000007f6);
+    }
+
+    #[test]
+    fn parse_opcode() {
+        assert_eq!("0x00".parse::<Opcode>(), Ok(Opcode(Uimm(0))));
+        assert_eq!("0x3f".parse::<Opcode>(), Ok(Opcode(Uimm(63))));
+        assert_eq!("32".parse::<Opcode>(), Ok(Opcode(Uimm(32))));
+        assert_eq!("64".parse::<Opcode>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!("-1".parse::<Opcode>(), Err(ParseImmidiateError::InvalidNumber));
+    }
+
+    #[test]
+    fn bits_opcode() {
+        assert_eq!(Opcode(Uimm(0x00)).bits(), 0x00000000u32);
+        assert_eq!(Opcode(Uimm(0x01)).bits(), 0x04000000u32);
+        assert_eq!(Opcode(Uimm(0x02)).bits(), 0x08000000u32);
+        assert_eq!(Opcode(Uimm(0x04)).bits(), 0x10000000u32);
+        assert_eq!(Opcode(Uimm(0x08)).bits(), 0x20000000u32);
+        assert_eq!(Opcode(Uimm(0x10)).bits(), 0x40000000u32);
+        assert_eq!(Opcode(Uimm(0x20)).bits(), 0x80000000u32);
+        assert_eq!(Opcode(Uimm(0x3e)).bits(), 0xf8000000u32);
+    }
+
+    #[test]
+    fn parse_reg(){
+        assert_eq!("zero".parse::<Reg>(), Ok(Reg(0)));
+    }
+
+    #[test]
+    fn bits_rd() {
+        assert_eq!(Rd(Reg(1)).bits(), 0x00010000u32);
+        assert_eq!(Rd(Reg(2)).bits(), 0x00020000u32);
+        assert_eq!(Rd(Reg(4)).bits(), 0x00040000u32);
+        assert_eq!(Rd(Reg(8)).bits(), 0x00080000u32);
+        assert_eq!(Rd(Reg(16)).bits(), 0x00100000u32);
+        assert_eq!(Rd(Reg(27)).bits(), 0x001b0000u32);
+    }
+
+    #[test]
+    fn bits_rs() {
+        assert_eq!(Rs(Reg(1)).bits(), 0x00200000u32);
+        assert_eq!(Rs(Reg(2)).bits(), 0x00400000u32);
+        assert_eq!(Rs(Reg(4)).bits(), 0x00800000u32);
+        assert_eq!(Rs(Reg(8)).bits(), 0x01000000u32);
+        assert_eq!(Rs(Reg(16)).bits(), 0x02000000u32);
+        assert_eq!(Rs(Reg(27)).bits(), 0x03600000u32);
+    }
+
+    #[test]
+    fn bits_rt() {
+        assert_eq!(Rt(Reg(1)).bits(), 0x00000800u32);
+        assert_eq!(Rt(Reg(2)).bits(), 0x00001000u32);
+        assert_eq!(Rt(Reg(4)).bits(), 0x00002000u32);
+        assert_eq!(Rt(Reg(8)).bits(), 0x00004000u32);
+        assert_eq!(Rt(Reg(16)).bits(), 0x00008000u32);
+        assert_eq!(Rt(Reg(27)).bits(), 0x0000d800u32);
+    }
+
+    #[test]
+    fn bits_jmpop() {
+        assert_eq!(Jmpop::Call.bits(), 0x00000000);
+        assert_eq!(Jmpop::Jump.bits(), 0x01000000);
+    }
+}
