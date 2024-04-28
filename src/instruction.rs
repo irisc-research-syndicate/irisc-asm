@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use anyhow::{bail, ensure};
 
-use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Rs, Rt, Simm, Uimm};
+use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm};
 
 pub enum Instruction {
     Label(Label),
@@ -16,6 +16,8 @@ pub enum Instruction {
     Set1(Rd, Rs, Uimm<16>),
     Set2(Rd, Rs, Uimm<16>),
     Set3(Rd, Rs, Uimm<16>),
+    Set32(Rd, Uimm<32>),
+    Set64(Rd, Uimm<64>),
 }
 
 impl FromStr for Instruction {
@@ -97,12 +99,22 @@ impl Instruction {
             Call(lbl) => JumpInst(Jmpop::Call, lbl).assemble(asm)?,
             JumpInst(jmpop, lbl) => {
                 let offset: i32 = (asm.lookup(&lbl.0)? as i32 - asm.current_address() as i32) >> 2;
-                asm.emit(Opcode::fixed(0x25) | jmpop | Simm::<24>::new(offset).unwrap())?;
+                asm.emit(Opcode::fixed(0x25) | jmpop | Simm::<24>::new(offset as i64).unwrap())?;
             }
             Set0(rd, rs, uimm) => asm.emit(Opcode::fixed(0x06) | rd | rs | uimm)?,
             Set1(rd, rs, uimm) => asm.emit(Opcode::fixed(0x07) | rd | rs | uimm)?,
             Set3(rd, rs, uimm) => asm.emit(Opcode::fixed(0x08) | rd | rs | uimm)?,
             Set2(rd, rs, uimm) => asm.emit(Opcode::fixed(0x09) | rd | rs | uimm)?,
+            Set64(rd, uimm) => {
+                Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
+                Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
+                Set2(rd, Rs(rd.0), Uimm((uimm.0 >> 32) & 0xffff)).assemble(asm)?;
+                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 48) & 0xffff)).assemble(asm)?;
+            }
+            Set32(rd, uimm) => {
+                Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
+                Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
+            }
         }
 
         Ok(())
