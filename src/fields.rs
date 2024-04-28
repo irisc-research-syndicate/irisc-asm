@@ -41,7 +41,7 @@ impl<A: Bits, B: Bits, Rhs: Bits> core::ops::BitOr<Rhs> for Or<A, B> {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Error)]
 pub enum ParseImmidiateError {
     #[error("Failed to parse number")]
     InvalidNumber,
@@ -50,10 +50,11 @@ pub enum ParseImmidiateError {
     OutOfRange,
 }
 
-pub struct Uimm<const BITS: usize>(u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Uimm<const BITS: usize>(pub u64);
 
 impl<const BITS: usize> Uimm<BITS> {
-    pub fn new(number: u32) -> Result<Self, ParseImmidiateError> {
+    pub fn new(number: u64) -> Result<Self, ParseImmidiateError> {
         if number >= (1 << BITS) {
             return Err(ParseImmidiateError::OutOfRange);
         }
@@ -67,7 +68,7 @@ impl<const BITS: usize> FromStr for Uimm<BITS> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let number = if let Some(s) = s.strip_prefix("0x") {
-            u32::from_str_radix(s, 16)
+            u64::from_str_radix(s, 16)
         } else {
             s.parse()
         }
@@ -79,14 +80,14 @@ impl<const BITS: usize> FromStr for Uimm<BITS> {
 
 impl<const BITS: usize> Bits for Uimm<BITS> {
     fn bits(&self) -> u32 {
-        self.0
+        (self.0 & ((1 << BITS) - 1)) as u32
     }
 }
-
-pub struct Simm<const BITS: usize>(i32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Simm<const BITS: usize>(pub i64);
 
 impl<const BITS: usize> Simm<BITS> {
-    pub fn new(number: i32) -> Result<Self, ParseImmidiateError> {
+    pub fn new(number: i64) -> Result<Self, ParseImmidiateError> {
         if number < -(1 << (BITS - 1)) {
             return Err(ParseImmidiateError::OutOfRange);
         }
@@ -95,7 +96,7 @@ impl<const BITS: usize> Simm<BITS> {
             return Err(ParseImmidiateError::OutOfRange);
         }
 
-        Ok(Self(number & ((1 << BITS) - 1)))
+        Ok(Self(number))
     }
 }
 
@@ -110,7 +111,7 @@ impl<const BITS: usize> FromStr for Simm<BITS> {
         };
 
         let number = if let Some(s) = s.strip_prefix("0x") {
-            i32::from_str_radix(s, 16)
+            i64::from_str_radix(s, 16)
         } else {
             s.parse()
         }
@@ -124,19 +125,20 @@ impl<const BITS: usize> FromStr for Simm<BITS> {
 
 impl<const BITS: usize> Bits for Simm<BITS> {
     fn bits(&self) -> u32 {
-        self.0 as u32
+        self.0 as u32 & ((1 << BITS) - 1)
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub struct Opcode(pub Uimm<6>);
 
 impl Opcode {
     pub fn new(number: u32) -> Result<Self, ParseImmidiateError> {
-        Ok(Self(Uimm::new(number)?))
+        Ok(Self(Uimm::new(number as u64)?))
     }
 
     pub fn fixed(number: u32) -> Self {
-        Self(Uimm(number))
+        Self(Uimm(number as u64))
     }
 }
 
@@ -150,13 +152,14 @@ impl FromStr for Opcode {
 
 impl_bits_at_offset_inner!(Opcode, 26);
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ParseRegisterError {
     #[error("Invalid Register")]
     InvalidRegister,
 }
 
-pub struct Reg(u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Reg(pub u32);
 
 impl FromStr for Reg {
     type Err = ParseRegisterError;
@@ -202,15 +205,19 @@ macro_rules! impl_register {
     };
 }
 
-pub struct Rd(Reg);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Rd(pub Reg);
 impl_register!(Rs, 21);
 
-pub struct Rs(Reg);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Rs(pub Reg);
 impl_register!(Rd, 16);
 
-pub struct Rt(Reg);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Rt(pub Reg);
 impl_register!(Rt, 11);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum Jmpop {
     Jump,
     Call,
@@ -227,6 +234,7 @@ impl Bits for Jmpop {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct Label(pub String);
 
 impl FromStr for Label {
