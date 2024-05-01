@@ -260,13 +260,19 @@ mod tests {
         assert_eq!("0x00".parse::<Uimm<8>>(), Ok(Uimm(0)));
         assert_eq!("10".parse::<Uimm<8>>(), Ok(Uimm(10)));
         assert_eq!("255".parse::<Uimm<8>>(), Ok(Uimm(255)));
-        assert_eq!("256".parse::<Uimm<8>>(), Err(ParseImmidiateError::OutOfRange));
-        assert_eq!("-10".parse::<Uimm<8>>(), Err(ParseImmidiateError::InvalidNumber));
+        assert_eq!(
+            "256".parse::<Uimm<8>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
+        assert_eq!(
+            "-10".parse::<Uimm<8>>(),
+            Err(ParseImmidiateError::InvalidNumber)
+        );
         assert_eq!("0x1ffff".parse::<Uimm<17>>(), Ok(Uimm(0x1ffff)));
     }
 
     #[test]
-    fn bits_uimm(){
+    fn bits_uimm() {
         assert_eq!(Uimm::<11>(10).bits(), 10u32);
         assert_eq!(Uimm::<11>(0x7ff).bits(), 0x7ffu32);
         assert_eq!(Uimm::<11>(0xfff).bits(), 0x7ffu32);
@@ -276,18 +282,33 @@ mod tests {
     fn parse_simm() {
         assert_eq!("0x00".parse::<Simm<8>>(), Ok(Simm(0)));
         assert_eq!("10".parse::<Simm<8>>(), Ok(Simm(10)));
-        assert_eq!("255".parse::<Simm<8>>(), Err(ParseImmidiateError::OutOfRange));
-        assert_eq!("256".parse::<Simm<8>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!(
+            "255".parse::<Simm<8>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
+        assert_eq!(
+            "256".parse::<Simm<8>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
         assert_eq!("-10".parse::<Simm<8>>(), Ok(Simm(-10)));
-        assert_eq!("0x1ffff".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!(
+            "0x1ffff".parse::<Simm<17>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
         assert_eq!("0xffff".parse::<Simm<17>>(), Ok(Simm(0xffff)));
-        assert_eq!("0x10000".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!(
+            "0x10000".parse::<Simm<17>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
         assert_eq!("-0x10000".parse::<Simm<17>>(), Ok(Simm(-0x10000)));
-        assert_eq!("-0x10001".parse::<Simm<17>>(), Err(ParseImmidiateError::OutOfRange));
+        assert_eq!(
+            "-0x10001".parse::<Simm<17>>(),
+            Err(ParseImmidiateError::OutOfRange)
+        );
     }
 
     #[test]
-    fn bits_simm(){
+    fn bits_simm() {
         assert_eq!(Simm::<11>(10).bits(), 10u32);
         assert_eq!(Simm::<11>(0x7ff).bits(), 0x7ffu32);
         assert_eq!(Simm::<11>(-10).bits(), 0x000007f6);
@@ -299,7 +320,10 @@ mod tests {
         assert_eq!("0x3f".parse::<Opcode>(), Ok(Opcode(Uimm(63))));
         assert_eq!("32".parse::<Opcode>(), Ok(Opcode(Uimm(32))));
         assert_eq!("64".parse::<Opcode>(), Err(ParseImmidiateError::OutOfRange));
-        assert_eq!("-1".parse::<Opcode>(), Err(ParseImmidiateError::InvalidNumber));
+        assert_eq!(
+            "-1".parse::<Opcode>(),
+            Err(ParseImmidiateError::InvalidNumber)
+        );
     }
 
     #[test]
@@ -315,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_reg(){
+    fn parse_reg() {
         assert_eq!("zero".parse::<Reg>(), Ok(Reg(0)));
     }
 
