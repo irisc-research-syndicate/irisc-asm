@@ -1,14 +1,63 @@
-use std::{collections::BTreeMap, io::Write, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use clap::Parser;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 pub mod fields;
-//use fields::{Bits, Opcode, Rd, Rs, Rt, Uimm, Simm};
-use fields::Bits;
 
 pub mod instruction;
-use instruction::Instruction;
+
+pub mod assembler;
+use assembler::assemble_template;
+
+#[serde_as]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+struct Shellcode {
+    #[serde_as(as = "serde_with::hex::Hex")]
+    code: Vec<u8>,
+    parameters: BTreeMap<String, u64>,
+    labels: BTreeMap<String, u32>,
+}
+
+// parse everything from -2**63-1 to 2**64-1 into a u64
+fn parse_number(number: &str) -> Result<u64> {
+    if let Some(number) = number.strip_prefix("-") {
+        if let Some(hex_number) = number.strip_prefix("0x") {
+            Ok(-i64::from_str_radix(hex_number, 16)? as u64)
+        } else {
+            Ok(-i64::from_str_radix(number, 10)? as u64)
+        }
+    } else if let Some(hex_number) = number.strip_prefix("0x") {
+        Ok(u64::from_str_radix(hex_number, 16)?)
+    } else {
+        Ok(number.parse()?)
+    }
+}
+
+fn parse_parameter(s: &str) -> Result<(String, Vec<u64>)> {
+    let (key, val) = s.split_once('=').context("no '=' is argument")?;
+    let mut values = vec![];
+    for value in val.split(",") {
+        values.extend(
+            match value {
+                "rand8" => vec![rand::random::<u8>() as u64],
+                "rand16" => vec![rand::random::<u16>() as u64],
+                "rand32" => vec![rand::random::<u32>() as u64],
+                "rand64" => vec![rand::random::<u64>() as u64],
+                number_or_range => {
+                    if let Some((low, high)) = number_or_range.split_once('-') {
+                        (parse_number(low)?..=parse_number(high)?).collect()
+                    } else {
+                        vec![parse_number(number_or_range)?]
+                    }
+                }
+            }
+        )
+    }
+    Ok((key.to_string(), values))
+}
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -20,79 +69,42 @@ struct Args {
     /// Output file
     output: PathBuf,
 
+    #[arg(short, long)]
+    labels: Option<PathBuf>,
+
     #[arg(short, long, default_value_t = 0)]
     base_addr: u32,
+
+    #[arg(short, long, value_parser = parse_parameter)]
+    param: Vec<(String, Vec<u64>)>
+}
+
+pub fn cartesian_product<K: Clone, V: Clone>(sets: Vec<(K, Vec<V>)>) -> Vec<Vec<(K, V)>> {
+    if let Some(((k, set), rest)) = sets.split_first() {
+        set.into_iter().flat_map(|v|
+            cartesian_product(rest.to_vec()).into_iter().map(|mut row| {
+                row.push((k.clone(), v.clone()));
+                row
+            })
+        ).collect()
+    } else {
+        vec![vec![]]
+    }
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let input = std::fs::read_to_string(&args.input)?;
-    let mut output = std::fs::File::create(&args.output)?;
+    let template = std::fs::read_to_string(&args.input)?;
 
-    let mut assembler = Assembler::new(args.base_addr);
-
-    // Generate labels
-    assembler.assemble(&input)?;
-    assembler.output.clear();
-    assembler.assemble(&input)?;
-
-    println!("labels: {:?}", assembler.labels);
-
-    output
-        .write_all(&assembler.output)
-        .context("could not write output")?;
+    for parameters in cartesian_product(args.param).into_iter().map(BTreeMap::from_iter) {
+        let (code, labels) = assemble_template(args.base_addr, &template, &parameters)?;
+        println!("{}", serde_json::to_string(&Shellcode {
+            parameters,
+            code,
+            labels,
+        })?);
+    }
 
     Ok(())
-}
-
-pub struct Assembler {
-    base_addr: u32,
-    labels: BTreeMap<String, u32>,
-    output: Vec<u8>,
-}
-
-impl Assembler {
-    pub fn new(base_addr: u32) -> Self {
-        Self {
-            labels: Default::default(),
-            output: Default::default(),
-            base_addr,
-        }
-    }
-
-    fn assemble(&mut self, source: &str) -> Result<(), anyhow::Error> {
-        for line in source.lines() {
-            let line = line.trim();
-            if line.starts_with('#') || line.is_empty() {
-                continue;
-            }
-            line.parse::<Instruction>()?.assemble(self)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl instruction::Assembler for Assembler {
-    type Err = anyhow::Error;
-
-    fn current_address(&self) -> u32 {
-        self.base_addr + self.output.len() as u32
-    }
-
-    fn label(&mut self, name: &str, address: u32) -> Result<(), Self::Err> {
-        self.labels.insert(name.to_string(), address);
-        Ok(())
-    }
-
-    fn lookup(&self, name: &str) -> Result<u32, Self::Err> {
-        Ok(*self.labels.get(name).unwrap_or(&0u32))
-    }
-
-    fn emit(&mut self, bits: impl Bits) -> Result<(), Self::Err> {
-        self.output.extend_from_slice(&bits.bits().to_be_bytes());
-
-        Ok(())
-    }
 }

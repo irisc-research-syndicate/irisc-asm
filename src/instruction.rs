@@ -4,6 +4,7 @@ use anyhow::{bail, ensure};
 
 use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
     Label(Label),
     Unki(Opcode, Rd, Rs, Simm<16>),
@@ -69,12 +70,20 @@ impl FromStr for Instruction {
                 ensure!(params.len() == 1, "Wrong number of parameters");
                 Call(params[0].parse()?)
             }
+            "set32" => {
+                ensure!(params.len() == 2, "Wrong number of parameters");
+                Set32(params[0].parse()?, params[1].parse()?)
+            }
+            "set64" => {
+                ensure!(params.len() == 2, "Wrong number of parameters");
+                Set64(params[0].parse()?, params[1].parse()?)
+            }
             &_ => bail!("Unknown instruction: {}", line),
         })
     }
 }
 
-pub trait Assembler {
+pub trait Assembler: Sized {
     type Err;
 
     fn current_address(&self) -> u32;
@@ -84,13 +93,20 @@ pub trait Assembler {
     fn lookup(&self, name: &str) -> Result<u32, Self::Err>;
 
     fn emit(&mut self, bits: impl Bits) -> Result<(), Self::Err>;
+
+    fn assemble(&mut self, instructions: &[Instruction]) -> Result<(), Self::Err> {
+        for instruction in instructions {
+            instruction.assemble(self)?
+        }
+        Ok(())
+    }
 }
 
 impl Instruction {
-    pub fn assemble<Asm: Assembler>(self, asm: &mut Asm) -> Result<(), Asm::Err> {
+    pub fn assemble<Asm: Assembler>(&self, asm: &mut Asm) -> Result<(), Asm::Err> {
         use Instruction::*;
 
-        match self {
+        match self.clone() {
             Label(lbl) => asm.label(&lbl.0, asm.current_address())?,
             Unki(op, rd, rs, simm) => asm.emit(op | rd | rs | simm)?,
             Unkr(op, rd, rs, rt, simm) => asm.emit(op | rd | rs | rt | simm)?,
@@ -106,17 +122,26 @@ impl Instruction {
             Set3(rd, rs, uimm) => asm.emit(Opcode::fixed(0x08) | rd | rs | uimm)?,
             Set2(rd, rs, uimm) => asm.emit(Opcode::fixed(0x09) | rd | rs | uimm)?,
             Set64(rd, uimm) => {
-                Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
-                Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
-                Set2(rd, Rs(rd.0), Uimm((uimm.0 >> 32) & 0xffff)).assemble(asm)?;
-                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 48) & 0xffff)).assemble(asm)?;
+                Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 48) & 0xffff)).assemble(asm)?;
+                Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 32) & 0xffff)).assemble(asm)?;
+                Set2(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
+                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
             }
             Set32(rd, uimm) => {
-                Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
-                Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
+                Set2(rd, Rs(Reg(0)), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
+                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
             }
         }
 
         Ok(())
+    }
+
+    pub fn parse(source: &str) -> Result<Vec<Self>, anyhow::Error> {
+        source
+            .lines()
+            .map(|line| line.trim())
+            .filter(|line| !line.starts_with('#') && !line.is_empty())
+            .map(|line| line.parse())
+            .collect()
     }
 }
