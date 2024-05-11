@@ -21,7 +21,7 @@ pub fn assemble_template(base_addr: u32, template: &str, parameters: &BTreeMap<S
     for (k, v) in parameters.iter() {
         ctx.insert(k, v);
     }
-    let source = tera::Tera::one_off(&template, &ctx, false)?;
+    let source = tera::Tera::one_off(template, &ctx, false)?;
     let (code, labels) = assemble(base_addr, &source)?;
     Ok((code, labels))
 }
@@ -46,7 +46,7 @@ impl Assembler for LabelAssembler {
     type Err = anyhow::Error;
 
     fn current_address(&self) -> u32 {
-        return self.base_addr + self.offset;
+        self.base_addr + self.offset
     }
 
     fn label(&mut self, name: &str, address: u32) -> Result<(), Self::Err> {
@@ -59,7 +59,7 @@ impl Assembler for LabelAssembler {
     }
 
     fn lookup(&self, name: &str) -> Result<u32, Self::Err> {
-        Ok(self.labels.get(name).unwrap_or(&0xffffffff).clone())
+        Ok(*self.labels.get(name).unwrap_or(&0xffffffff))
     }
 
     fn emit(&mut self, _bits: impl Bits) -> Result<(), Self::Err> {
@@ -78,7 +78,7 @@ impl OutputAssembler {
     pub fn new(base_addr: u32, labels: BTreeMap<String, u32>) -> Self {
         Self {
             base_addr,
-            labels: labels,
+            labels,
             output: Default::default(),
         }
     }

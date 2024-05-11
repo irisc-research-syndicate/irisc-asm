@@ -125,11 +125,11 @@ impl Instruction {
                 Set0(rd, Rs(Reg(0)), Uimm((uimm.0 >> 48) & 0xffff)).assemble(asm)?;
                 Set1(rd, Rs(rd.0), Uimm((uimm.0 >> 32) & 0xffff)).assemble(asm)?;
                 Set2(rd, Rs(rd.0), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
-                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
+                Set3(rd, Rs(rd.0), Uimm(uimm.0 & 0xffff)).assemble(asm)?;
             }
             Set32(rd, uimm) => {
                 Set2(rd, Rs(Reg(0)), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
-                Set3(rd, Rs(rd.0), Uimm((uimm.0 >> 0) & 0xffff)).assemble(asm)?;
+                Set3(rd, Rs(rd.0), Uimm(uimm.0 & 0xffff)).assemble(asm)?;
             }
         }
 
