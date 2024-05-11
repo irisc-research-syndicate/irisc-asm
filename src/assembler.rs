@@ -2,7 +2,7 @@ use std::collections::{btree_map::Entry, BTreeMap};
 
 use anyhow::{bail, ensure};
 
-use crate::{fields::Bits, instruction::{Assembler, Instruction}};
+use crate::{fields::Bits, instructions::{Assembler, Instruction}};
 
 pub fn assemble(base_addr: u32, source: &str) -> anyhow::Result<(Vec<u8>, BTreeMap<String, u32>)> {
     let instructions = Instruction::parse(source)?;

@@ -1,8 +1,6 @@
 use std::{convert::Infallible, str::FromStr};
 use thiserror::Error;
 
-use crate::instruction::Assembler;
-
 pub trait Bits {
     fn bits(&self) -> u32;
 }
@@ -245,12 +243,6 @@ impl FromStr for Label {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Label(s.to_string()))
-    }
-}
-
-impl Label {
-    pub fn lookup<Asm: Assembler>(&self, asm: Asm) -> Result<u32, Asm::Err> {
-        asm.lookup(&self.0)
     }
 }
 
