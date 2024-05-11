@@ -145,3 +145,90 @@ impl Instruction {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn instruction_parse_addi() {
+        let instructions = Instruction::parse("addi r5, r0, 0x1234").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Addi("r5".parse().unwrap(), "r0".parse().unwrap(), Simm::new(0x1234).unwrap()),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_unki() {
+        let instructions = Instruction::parse("unk.i 0x12, r5, r0, 0x1234").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Unki(Opcode::fixed(0x12), "r5".parse().unwrap(), "r0".parse().unwrap(), Simm::new(0x1234).unwrap()),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_unkr() {
+        let instructions = Instruction::parse("unk.r 0x12, r5, r0, r6, 0x34").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Unkr(
+                Opcode::fixed(0x12),
+                "r5".parse().unwrap(),
+                "r0".parse().unwrap(),
+                "r6".parse().unwrap(),
+                Simm::new(0x34).unwrap()
+            ),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_jump() {
+        let instructions = Instruction::parse("jump foobar").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Jump("foobar".parse().unwrap()),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_call() {
+        let instructions = Instruction::parse("call foobar").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Call("foobar".parse().unwrap()),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_set32() {
+        let instructions = Instruction::parse("set32 r5, 0x12345678").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Set32("r5".parse().unwrap(), Uimm(0x12345678)),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_set64() {
+        let instructions = Instruction::parse("set64 r5, 0x8765432112345678").unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Set64("r5".parse().unwrap(), Uimm(0x8765432112345678)),
+        ]);
+    }
+
+    #[test]
+    fn instruction_parse_multiple() {
+        let instructions = Instruction::parse(r#"
+            addi r5, r0, 0x1234
+            unk.i 0x13, r5, r0, 0x1234
+            unk.r 0x13, r5, r0, r7, 0x34
+            # this is a comment
+            jump foobar
+
+            call foobar
+        "#).unwrap();
+        assert_eq!(instructions, vec![
+            Instruction::Addi("r5".parse().unwrap(), "r0".parse().unwrap(), Simm::new(0x1234).unwrap()),
+            Instruction::Unki(Opcode::fixed(0x13), "r5".parse().unwrap(), "r0".parse().unwrap(), Simm(0x1234)),
+            Instruction::Unkr(Opcode::fixed(0x13), "r5".parse().unwrap(), "r0".parse().unwrap(), "r7".parse().unwrap(), Simm(0x34)),
+            Instruction::Jump("foobar".parse().unwrap()),
+            Instruction::Call("foobar".parse().unwrap()),
+        ]);
+    }
+}
