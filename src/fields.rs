@@ -54,7 +54,7 @@ pub struct Uimm<const BITS: usize>(pub u64);
 impl<const BITS: usize> Uimm<BITS> {
     pub fn new(number: u64) -> Result<Self, ParseImmidiateError> {
         if BITS == 64 {
-            return Ok(Self(number))
+            return Ok(Self(number));
         }
         if number >= (1 << BITS) {
             return Err(ParseImmidiateError::OutOfRange);

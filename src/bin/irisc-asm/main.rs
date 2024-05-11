@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use irisc_asm::assemble_template;
-use irisc_asm::utils::{parse_parameter, cartesian_product};
+use irisc_asm::utils::{cartesian_product, parse_parameter};
 
 #[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -28,22 +28,27 @@ struct Args {
     base_addr: u32,
 
     #[arg(short, long, value_parser = parse_parameter)]
-    param: Vec<(String, Vec<u64>)>
+    param: Vec<(String, Vec<u64>)>,
 }
-
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
     let template = std::fs::read_to_string(&args.input)?;
 
-    for parameters in cartesian_product(args.param).into_iter().map(BTreeMap::from_iter) {
+    for parameters in cartesian_product(args.param)
+        .into_iter()
+        .map(BTreeMap::from_iter)
+    {
         let (code, labels) = assemble_template(args.base_addr, &template, &parameters)?;
-        println!("{}", serde_json::to_string(&Shellcode {
-            parameters,
-            code,
-            labels,
-        })?);
+        println!(
+            "{}",
+            serde_json::to_string(&Shellcode {
+                parameters,
+                code,
+                labels,
+            })?
+        );
     }
 
     Ok(())

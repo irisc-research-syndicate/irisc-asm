@@ -2,7 +2,10 @@ use std::collections::{btree_map::Entry, BTreeMap};
 
 use anyhow::{bail, ensure};
 
-use crate::{fields::Bits, instructions::{Assembler, Instruction}};
+use crate::{
+    fields::Bits,
+    instructions::{Assembler, Instruction},
+};
 
 pub fn assemble(base_addr: u32, source: &str) -> anyhow::Result<(Vec<u8>, BTreeMap<String, u32>)> {
     let instructions = Instruction::parse(source)?;
@@ -16,7 +19,11 @@ pub fn assemble(base_addr: u32, source: &str) -> anyhow::Result<(Vec<u8>, BTreeM
     Ok((output_assembler.output, output_assembler.labels))
 }
 
-pub fn assemble_template(base_addr: u32, template: &str, parameters: &BTreeMap<String, u64>) -> anyhow::Result<(Vec<u8>, BTreeMap<String, u32>)> {
+pub fn assemble_template(
+    base_addr: u32,
+    template: &str,
+    parameters: &BTreeMap<String, u64>,
+) -> anyhow::Result<(Vec<u8>, BTreeMap<String, u32>)> {
     let mut ctx = tera::Context::new();
     for (k, v) in parameters.iter() {
         ctx.insert(k, v);
