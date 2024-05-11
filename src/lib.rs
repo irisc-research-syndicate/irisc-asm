@@ -1,6 +1,6 @@
 pub mod fields;
-pub mod instruction;
+pub mod instructions;
 pub mod assembler;
 
 pub use assembler::{assemble, assemble_template};
-pub use instruction::Instruction;
+pub use instructions::Instruction;
