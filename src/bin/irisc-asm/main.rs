@@ -5,12 +5,7 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-pub mod fields;
-
-pub mod instruction;
-
-pub mod assembler;
-use assembler::assemble_template;
+use irisc_asm::assemble_template;
 
 #[serde_as]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
