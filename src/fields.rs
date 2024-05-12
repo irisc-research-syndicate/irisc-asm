@@ -153,6 +153,44 @@ impl FromStr for Opcode {
 
 impl_bits_at_offset_inner!(Opcode, 26);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Funct(pub Uimm<11>);
+
+impl Funct {
+    pub fn new(number: u32) -> Result<Self, ParseImmidiateError> {
+        Ok(Self(Uimm::new(number as u64)?))
+    }
+
+    pub fn fixed(number: u32) -> Self {
+        Self(Uimm(number as u64))
+    }
+}
+
+impl FromStr for Funct {
+    type Err = ParseImmidiateError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
+impl_bits_at_offset_inner!(Funct, 0);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Off9(pub Uimm<9>);
+
+impl FromStr for Off9 {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let uimm11: Uimm<11> = s.parse()?;
+        anyhow::ensure!(uimm11.0 & 0x3 == 0, "unaligned offset");
+        Ok(Self(Uimm(uimm11.0 >> 2)))
+    }
+}
+
+impl_bits_at_offset_inner!(Off9, 2);
+
 #[derive(Debug, Error, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ParseRegisterError {
     #[error("Invalid Register")]
