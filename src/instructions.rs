@@ -24,9 +24,9 @@ pub enum Instruction {
     Sub(Rd, Rs, Rt),
     Subs(Rd, Rs, Rt),
     Retd,
-    Ld(Rd, Rs, Rt, Off9),
-    Sd(Rd, Rs, Rt, Off9),
-    Sq(Rd, Rs, Rt, Off9),
+    Ldd(Rd, Rs, Rt, Off9),
+    Std(Rd, Rs, Rt, Off9),
+    Stq(Rd, Rs, Rt, Off9),
 }
 
 impl FromStr for Instruction {
@@ -106,13 +106,17 @@ impl FromStr for Instruction {
                 ensure!(params.len() == 0, "Wrong number of parameters");
                 Retd
             }
-            "ld" => {
+            "ld.d" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Ld(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Ldd(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
             }
-            "sd" => {
+            "st.d" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Ld(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Std(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+            }
+            "st.q" => {
+                ensure!(params.len() == 4, "Wrong number of parameters");
+                Stq(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
             }
             &_ => bail!("Unknown instruction: {}", line),
         })
@@ -172,9 +176,9 @@ impl Instruction {
             Sub(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x004))?,
             Subs(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x005))?,
             Retd => asm.emit(Opcode::fixed(0x3f) | Funct::fixed(0x02d))?,
-            Ld(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x19) | rd | rs | rt | off9 | Uimm::<2>(2))?,
-            Sd(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?,
-            Sq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Ldd(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x19) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Std(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Stq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(2))?,
         }
 
         Ok(())
