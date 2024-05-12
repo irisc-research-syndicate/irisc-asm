@@ -36,11 +36,8 @@ impl FromStr for Instruction {
         use Instruction::*;
 
         let line = line.trim();
-        let Some((cmd, rest)) = line.split_once(' ') else {
-            bail!("Bad instruction: {}", line)
-        };
-
-        let params = rest.trim().split(',').map(|p| p.trim()).collect::<Vec<_>>();
+        let (cmd, rest) = line.split_once(' ').unwrap_or((line, &""));
+        let params = rest.trim().split(',').map(|p| p.trim()).filter(|p| !p.is_empty()).collect::<Vec<_>>();
 
         Ok(match cmd {
             "lbl" => {
@@ -277,6 +274,15 @@ mod tests {
                 Uimm(0x8765432112345678)
             ),]
         );
+    }
+
+    #[test]
+    fn instruction_parse_retd() {
+        let instructions = Instruction::parse("ret.d").unwrap();
+        assert_eq!(
+            instructions,
+            vec![Instruction::Retd]
+        )
     }
 
     #[test]
