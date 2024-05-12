@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use anyhow::{bail, ensure};
 
-use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm};
+use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm, Funct, Off9};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -19,6 +19,14 @@ pub enum Instruction {
     Set3(Rd, Rs, Uimm<16>),
     Set32(Rd, Uimm<32>),
     Set64(Rd, Uimm<64>),
+    Alur(Funct, Rd, Rs, Rt),
+    Add(Rd, Rs, Rt),
+    Sub(Rd, Rs, Rt),
+    Subs(Rd, Rs, Rt),
+    Retd,
+    Ld(Rd, Rs, Rt, Off9),
+    Sd(Rd, Rs, Rt, Off9),
+    Sq(Rd, Rs, Rt, Off9),
 }
 
 impl FromStr for Instruction {
@@ -78,6 +86,34 @@ impl FromStr for Instruction {
                 ensure!(params.len() == 2, "Wrong number of parameters");
                 Set64(params[0].parse()?, params[1].parse()?)
             }
+            "alu.r" => {
+                ensure!(params.len() == 4, "Wrong number of parameters");
+                Alur(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+            }
+            "add" => {
+                ensure!(params.len() == 3, "Wrong number of parameters");
+                Add(params[0].parse()?, params[1].parse()?, params[2].parse()?)
+            }
+            "sub" => {
+                ensure!(params.len() == 3, "Wrong number of parameters");
+                Sub(params[0].parse()?, params[1].parse()?, params[2].parse()?)
+            }
+            "subs" => {
+                ensure!(params.len() == 3, "Wrong number of parameters");
+                Subs(params[0].parse()?, params[1].parse()?, params[2].parse()?)
+            }
+            "ret.d" => {
+                ensure!(params.len() == 0, "Wrong number of parameters");
+                Retd
+            }
+            "ld" => {
+                ensure!(params.len() == 4, "Wrong number of parameters");
+                Ld(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+            }
+            "sd" => {
+                ensure!(params.len() == 4, "Wrong number of parameters");
+                Ld(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+            }
             &_ => bail!("Unknown instruction: {}", line),
         })
     }
@@ -131,6 +167,14 @@ impl Instruction {
                 Set2(rd, Rs(Reg(0)), Uimm((uimm.0 >> 16) & 0xffff)).assemble(asm)?;
                 Set3(rd, Rs(rd.0), Uimm(uimm.0 & 0xffff)).assemble(asm)?;
             }
+            Alur(funct, rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | funct)?,
+            Add(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x000))?,
+            Sub(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x004))?,
+            Subs(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x005))?,
+            Retd => asm.emit(Opcode::fixed(0x3f) | Funct::fixed(0x02d))?,
+            Ld(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x19) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Sd(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Sq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(2))?,
         }
 
         Ok(())
