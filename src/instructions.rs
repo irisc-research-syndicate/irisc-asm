@@ -175,7 +175,7 @@ impl Instruction {
             Retd => asm.emit(Opcode::fixed(0x3f) | Funct::fixed(0x02d))?,
             Ldd(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x19) | rd | rs | rt | off9 | Uimm::<2>(2))?,
             Std(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?,
-            Stq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(2))?,
+            Stq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(0))?,
         }
 
         Ok(())
