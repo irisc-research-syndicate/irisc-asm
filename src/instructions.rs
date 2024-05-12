@@ -1,6 +1,6 @@
 use core::str::FromStr;
 
-use anyhow::{bail, ensure};
+use anyhow::{bail, ensure, Context};
 
 use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm, Funct, Off9};
 
@@ -186,7 +186,7 @@ impl Instruction {
             .lines()
             .map(|line| line.trim())
             .filter(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|line| line.parse())
+            .map(|line| line.parse().with_context(|| format!("Bad instruction: {}", line)))
             .collect()
     }
 }
