@@ -7,8 +7,8 @@ use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm, Fun
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
     Label(Label),
-    Unki(Opcode, Rd, Rs, Simm<16>),
-    Unkr(Opcode, Rd, Rs, Rt, Simm<11>),
+    Unki(Opcode, Rd, Rs, Uimm<16>),
+    Unkr(Opcode, Rd, Rs, Rt, Uimm<11>),
     Addi(Rd, Rs, Simm<16>),
     JumpInst(Jmpop, Label),
     Jump(Label),
@@ -145,8 +145,8 @@ impl Instruction {
 
         match self.clone() {
             Label(lbl) => asm.label(&lbl.0, asm.current_address())?,
-            Unki(op, rd, rs, simm) => asm.emit(op | rd | rs | simm)?,
-            Unkr(op, rd, rs, rt, simm) => asm.emit(op | rd | rs | rt | simm)?,
+            Unki(op, rd, rs, uimm) => asm.emit(op | rd | rs | uimm)?,
+            Unkr(op, rd, rs, rt, uimm) => asm.emit(op | rd | rs | rt | uimm)?,
             Addi(rd, rs, simm) => asm.emit(Opcode::fixed(0x00) | rd | rs | simm)?,
             Jump(lbl) => JumpInst(Jmpop::Jump, lbl).assemble(asm)?,
             Call(lbl) => JumpInst(Jmpop::Call, lbl).assemble(asm)?,
@@ -217,7 +217,7 @@ mod tests {
                 Opcode::fixed(0x12),
                 "r5".parse().unwrap(),
                 "r0".parse().unwrap(),
-                Simm::new(0x1234).unwrap()
+                Uimm(0x1234)
             ),]
         );
     }
@@ -232,7 +232,7 @@ mod tests {
                 "r5".parse().unwrap(),
                 "r0".parse().unwrap(),
                 "r6".parse().unwrap(),
-                Simm::new(0x34).unwrap()
+                Uimm(0x34)
             ),]
         );
     }
@@ -311,14 +311,14 @@ mod tests {
                     Opcode::fixed(0x13),
                     "r5".parse().unwrap(),
                     "r0".parse().unwrap(),
-                    Simm(0x1234)
+                    Uimm(0x1234)
                 ),
                 Instruction::Unkr(
                     Opcode::fixed(0x13),
                     "r5".parse().unwrap(),
                     "r0".parse().unwrap(),
                     "r7".parse().unwrap(),
-                    Simm(0x34)
+                    Uimm(0x34)
                 ),
                 Instruction::Jump("foobar".parse().unwrap()),
                 Instruction::Call("foobar".parse().unwrap()),
