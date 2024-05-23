@@ -33,6 +33,10 @@ pub enum Instruction {
     Stq(Rd, Rs, Rt, Off9),
 }
 
+fn check_indices<const N: usize>(indices: [usize; N]) {
+    assert_eq!(indices, std::array::from_fn(|i| i));
+}
+
 impl FromStr for Instruction {
     type Err = anyhow::Error;
 
@@ -48,114 +52,41 @@ impl FromStr for Instruction {
             .filter(|p| !p.is_empty())
             .collect::<Vec<_>>();
 
+        macro_rules! params {
+            ($variant:ident $( ( $($index:expr),* $(,)? ) )?) => {{
+                let indices = [$($($index),*)?];
+                check_indices(indices);
+                ensure!(params.len() == indices.len(), "Wrong number of parameters");
+                $variant $((
+                    $(
+                        params[$index].parse()?
+                    ),*
+                ))?
+            }};
+        }
+
         Ok(match cmd {
-            "lbl" => {
-                ensure!(params.len() == 1, "Wrong number of parameters");
-                Label(params[0].parse()?)
-            }
-            "unk.i" => {
-                ensure!(params.len() == 4, "Wrong number of parameters");
-                Unki(
-                    params[0].parse()?,
-                    params[1].parse()?,
-                    params[2].parse()?,
-                    params[3].parse()?,
-                )
-            }
-            "unk.r" => {
-                ensure!(params.len() == 5, "Wrong number of parameters");
-                Unkr(
-                    params[0].parse()?,
-                    params[1].parse()?,
-                    params[2].parse()?,
-                    params[3].parse()?,
-                    params[4].parse()?,
-                )
-            }
-            "addi" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Addi(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "jump" => {
-                ensure!(params.len() == 1, "Wrong number of parameters");
-                Jump(params[0].parse()?)
-            }
-            "call" => {
-                ensure!(params.len() == 1, "Wrong number of parameters");
-                Call(params[0].parse()?)
-            }
-            "set32" => {
-                ensure!(params.len() == 2, "Wrong number of parameters");
-                Set32(params[0].parse()?, params[1].parse()?)
-            }
-            "set64" => {
-                ensure!(params.len() == 2, "Wrong number of parameters");
-                Set64(params[0].parse()?, params[1].parse()?)
-            }
-            "alu.r" => {
-                ensure!(params.len() == 4, "Wrong number of parameters");
-                Alur(
-                    params[0].parse()?,
-                    params[1].parse()?,
-                    params[2].parse()?,
-                    params[3].parse()?,
-                )
-            }
-            "add" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Add(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "sub" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Sub(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "subs" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Subs(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "ret.d" => {
-                ensure!(params.len() == 0, "Wrong number of parameters");
-                Retd
-            }
-            "ld.b" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Ldb(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "ld.q" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Ldq(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "ld.uw" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Lduw(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "ld.d" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Ldd(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "ld.lw" => {
-                ensure!(params.len() == 3, "Wrong number of parameters");
-                Ldlw(params[0].parse()?, params[1].parse()?, params[2].parse()?)
-            }
-            "st.d" => {
-                ensure!(params.len() == 4, "Wrong number of parameters");
-                Std(
-                    params[0].parse()?,
-                    params[1].parse()?,
-                    params[2].parse()?,
-                    params[3].parse()?,
-                )
-            }
-            "st.q" => {
-                ensure!(params.len() == 4, "Wrong number of parameters");
-                Stq(
-                    params[0].parse()?,
-                    params[1].parse()?,
-                    params[2].parse()?,
-                    params[3].parse()?,
-                )
-            }
-            &_ => bail!("Unknown instruction: {}", line),
+            "lbl" => params!(Label(0)),
+            "unk.i" => params!(Unki(0, 1, 2, 3)),
+            "unk.r" => params!(Unkr(0, 1, 2, 3, 4)),
+            "addi" => params!(Addi(0, 1, 2)),
+            "jump" => params!(Jump(0)),
+            "call" => params!(Call(0)),
+            "set32" => params!(Set32(0, 1)),
+            "set64" => params!(Set64(0, 1)),
+            "alu.r" => params!(Alur(0, 1, 2, 3)),
+            "add" => params!(Add(0, 1, 2)),
+            "sub" => params!(Sub(0, 1, 2)),
+            "subs" => params!(Subs(0, 1, 2)),
+            "ret.d" => params!(Retd),
+            "ld.b" => params!(Ldb(0, 1, 2)),
+            "ld.q" => params!(Ldq(0, 1, 2)),
+            "ld.uw" => params!(Lduw(0, 1, 2)),
+            "ld.d" => params!(Ldd(0, 1, 2)),
+            "ld.lw" => params!(Ldlw(0, 1, 2)),
+            "st.d" => params!(Std(0, 1, 2, 3)),
+            "st.q" => params!(Stq(0, 1, 2, 3)),
+            _ => bail!("Unknown instruction: {}", line),
         })
     }
 }
