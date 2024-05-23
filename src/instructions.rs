@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use anyhow::{bail, ensure, Context};
 
-use crate::fields::{Bits, Jmpop, Label, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm, Funct, Off9, Off14};
+use crate::fields::{Bits, Funct, Jmpop, Label, Off14, Off9, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -41,7 +41,12 @@ impl FromStr for Instruction {
 
         let line = line.trim();
         let (cmd, rest) = line.split_once(' ').unwrap_or((line, &""));
-        let params = rest.trim().split(',').map(|p| p.trim()).filter(|p| !p.is_empty()).collect::<Vec<_>>();
+        let params = rest
+            .trim()
+            .split(',')
+            .map(|p| p.trim())
+            .filter(|p| !p.is_empty())
+            .collect::<Vec<_>>();
 
         Ok(match cmd {
             "lbl" => {
@@ -89,7 +94,12 @@ impl FromStr for Instruction {
             }
             "alu.r" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Alur(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Alur(
+                    params[0].parse()?,
+                    params[1].parse()?,
+                    params[2].parse()?,
+                    params[3].parse()?,
+                )
             }
             "add" => {
                 ensure!(params.len() == 3, "Wrong number of parameters");
@@ -129,11 +139,21 @@ impl FromStr for Instruction {
             }
             "st.d" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Std(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Std(
+                    params[0].parse()?,
+                    params[1].parse()?,
+                    params[2].parse()?,
+                    params[3].parse()?,
+                )
             }
             "st.q" => {
                 ensure!(params.len() == 4, "Wrong number of parameters");
-                Stq(params[0].parse()?, params[1].parse()?, params[2].parse()?, params[3].parse()?)
+                Stq(
+                    params[0].parse()?,
+                    params[1].parse()?,
+                    params[2].parse()?,
+                    params[3].parse()?,
+                )
             }
             &_ => bail!("Unknown instruction: {}", line),
         })
@@ -189,17 +209,31 @@ impl Instruction {
                 Set3(rd, Rs(rd.0), Uimm(uimm.0 & 0xffff)).assemble(asm)?;
             }
             Alur(funct, rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | funct)?,
-            Add(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x000))?,
-            Sub(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x004))?,
-            Subs(rd, rs, rt) => asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x005))?,
+            Add(rd, rs, rt) => {
+                asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x000))?
+            }
+            Sub(rd, rs, rt) => {
+                asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x004))?
+            }
+            Subs(rd, rs, rt) => {
+                asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x005))?
+            }
             Retd => asm.emit(Opcode::fixed(0x3f) | Funct::fixed(0x02d))?,
             Ldb(rd, rs, simm16) => asm.emit(Opcode::fixed(0x18) | rd | rs | simm16)?,
             Ldq(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(0))?,
-            Lduw(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(1))?,
+            Lduw(rd, rs, off14) => {
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(1))?
+            }
             Ldd(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(2))?,
-            Ldlw(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(3))?,
-            Std(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?,
-            Stq(rd, rs,rt, off9) => asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(0))?,
+            Ldlw(rd, rs, off14) => {
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(3))?
+            }
+            Std(rd, rs, rt, off9) => {
+                asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?
+            }
+            Stq(rd, rs, rt, off9) => {
+                asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(0))?
+            }
         }
 
         Ok(())
@@ -210,7 +244,10 @@ impl Instruction {
             .lines()
             .map(|line| line.trim())
             .filter(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|line| line.parse().with_context(|| format!("Bad instruction: {}", line)))
+            .map(|line| {
+                line.parse()
+                    .with_context(|| format!("Bad instruction: {}", line))
+            })
             .collect()
     }
 }
@@ -303,10 +340,7 @@ mod tests {
     #[test]
     fn instruction_parse_retd() {
         let instructions = Instruction::parse("ret.d").unwrap();
-        assert_eq!(
-            instructions,
-            vec![Instruction::Retd]
-        )
+        assert_eq!(instructions, vec![Instruction::Retd])
     }
 
     #[test]
