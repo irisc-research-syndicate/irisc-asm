@@ -191,6 +191,21 @@ impl FromStr for Off9 {
 
 impl_bits_at_offset_inner!(Off9, 2);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub struct Off14(pub Uimm<14>);
+
+impl FromStr for Off14 {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let uimm16: Uimm<16> = s.parse()?;
+        anyhow::ensure!(uimm16.0 & 0x3 == 0, "unaligned offset");
+        Ok(Self(Uimm(uimm16.0 >> 2)))
+    }
+}
+
+impl_bits_at_offset_inner!(Off14, 2);
+
 #[derive(Debug, Error, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ParseRegisterError {
     #[error("Invalid Register")]
