@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use anyhow::{bail, ensure, Context};
 
-use crate::fields::{Bits, Funct, Jmpop, Label, Off14, Off9, Opcode, Rd, Reg, Rs, Rt, Simm, Uimm};
+use crate::fields::{Bits, Funct, Jmpop, Label, Off14, Off9, Opcode, Rd, Reg, Rs, Rt, Simm, StoreOff16, Uimm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -29,6 +29,7 @@ pub enum Instruction {
     Lduw(Rd, Rs, Off14),
     Ldd(Rd, Rs, Off14),
     Ldlw(Rd, Rs, Off14),
+    Stb(Rt, Rs, StoreOff16),
     Std(Rd, Rs, Rt, Off9),
     Stq(Rd, Rs, Rt, Off9),
 }
@@ -84,6 +85,7 @@ impl FromStr for Instruction {
             "ld.uw" => params!(Lduw(0, 1, 2)),
             "ld.d" => params!(Ldd(0, 1, 2)),
             "ld.lw" => params!(Ldlw(0, 1, 2)),
+            "st.b" => params!(Stb(0, 1, 2)),
             "st.d" => params!(Std(0, 1, 2, 3)),
             "st.q" => params!(Stq(0, 1, 2, 3)),
             _ => bail!("Unknown instruction: {}", line),
@@ -159,6 +161,7 @@ impl Instruction {
             Ldlw(rd, rs, off14) => {
                 asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(3))?
             }
+            Stb(rt, rs, stoff16) => asm.emit(Opcode::fixed(0x1a) | rs | rt | stoff16)?,
             Std(rd, rs, rt, off9) => {
                 asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?
             }
