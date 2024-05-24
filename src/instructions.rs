@@ -10,7 +10,6 @@ pub enum Instruction {
     Unki(Opcode, Rd, Rs, Uimm<16>),
     Unkr(Opcode, Rd, Rs, Rt, Uimm<11>),
     Addi(Rd, Rs, Simm<16>),
-    JumpInst(Jmpop, Label),
     Jump(Label),
     Call(Label),
     Set0(Rd, Rs, Uimm<16>),
@@ -125,11 +124,13 @@ impl Instruction {
             Unki(op, rd, rs, uimm) => asm.emit(op | rd | rs | uimm)?,
             Unkr(op, rd, rs, rt, uimm) => asm.emit(op | rd | rs | rt | uimm)?,
             Addi(rd, rs, simm) => asm.emit(Opcode::fixed(0x00) | rd | rs | simm)?,
-            Jump(lbl) => JumpInst(Jmpop::Jump, lbl).assemble(asm)?,
-            Call(lbl) => JumpInst(Jmpop::Call, lbl).assemble(asm)?,
-            JumpInst(jmpop, lbl) => {
+            Jump(lbl) => {
                 let offset: i32 = (asm.lookup(&lbl.0)? as i32 - asm.current_address() as i32) >> 2;
-                asm.emit(Opcode::fixed(0x25) | jmpop | Simm::<24>::new(offset as i64).unwrap())?;
+                asm.emit(Opcode::fixed(0x25) | Jmpop::Jump | Simm::<24>::new(offset as i64).unwrap())?
+            }
+            Call(lbl) => {
+                let offset: i32 = (asm.lookup(&lbl.0)? as i32 - asm.current_address() as i32) >> 2;
+                asm.emit(Opcode::fixed(0x25) | Jmpop::Call | Simm::<24>::new(offset as i64).unwrap())?
             }
             Set0(rd, rs, uimm) => asm.emit(Opcode::fixed(0x06) | rd | rs | uimm)?,
             Set1(rd, rs, uimm) => asm.emit(Opcode::fixed(0x07) | rd | rs | uimm)?,
