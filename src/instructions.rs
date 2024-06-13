@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use anyhow::{bail, ensure, Context};
 
-use crate::fields::{Bits, Funct, Jmpop, Label, Off14, Off9, Opcode, Rd, Reg, Rs, Rt, Simm, StoreOff16, Uimm};
+use crate::fields::{Bits, Funct, Jmpop, Label, Memop, Off14, Off9, Opcode, Rd, Reg, Rs, Rt, Simm, StoreOff16, Uimm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -157,16 +157,24 @@ impl Instruction {
                 asm.emit(Opcode::fixed(0x3f) | rd | rs | rt | Funct::fixed(0x005))?
             }
             Retd => asm.emit(Opcode::fixed(0x3f) | Funct::fixed(0x02d))?,
-            Ldb(rd, rs, simm16) => asm.emit(Opcode::fixed(0x18) | rd | rs | simm16)?,
-            Ldq(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(0))?,
+            Ldb(rd, rs, simm16) => {
+                asm.emit(Opcode::fixed(0x18) | rd | rs | simm16)?
+            }
+            Ldq(rd, rs, off14) => {
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Memop::Qword)?
+            }
             Lduw(rd, rs, off14) => {
-                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(1))?
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Memop::UpperWord)?
             }
-            Ldd(rd, rs, off14) => asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(2))?,
+            Ldd(rd, rs, off14) => {
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Memop::Dword)?
+            }
             Ldlw(rd, rs, off14) => {
-                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Uimm::<2>(3))?
+                asm.emit(Opcode::fixed(0x19) | rd | rs | off14 | Memop::LowerWord)?
             }
-            Stb(rt, rs, stoff16) => asm.emit(Opcode::fixed(0x1a) | rs | rt | stoff16)?,
+            Stb(rt, rs, stoff16) => {
+                asm.emit(Opcode::fixed(0x1a) | rs | rt | stoff16)?
+            }
             Std(rd, rs, rt, off9) => {
                 asm.emit(Opcode::fixed(0x1b) | rd | rs | rt | off9 | Uimm::<2>(2))?
             }
