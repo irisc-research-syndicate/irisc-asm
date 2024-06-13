@@ -31,6 +31,8 @@ pub enum Instruction {
     Stb(Rt, Rs, StoreOff16),
     Std(Rd, Rs, Rt, Off9),
     Stq(Rd, Rs, Rt, Off9),
+    CsrR(Rd, Rs, Uimm<16>),
+    CsrW(Rd, Rs, Uimm<16>),
 }
 
 fn check_indices<const N: usize>(indices: [usize; N]) {
@@ -91,6 +93,8 @@ impl FromStr for Instruction {
             "st.b" => params!(Stb(0, 1, 2)),
             "st.d" => params!(Std(0, 1, 2, 3)),
             "st.q" => params!(Stq(0, 1, 2, 3)),
+            "csr.r" => params!(CsrR(0, 1, 2)),
+            "csr.w" => params!(CsrW(0, 1, 2)),
             _ => bail!("Unknown instruction: {}", line),
         })
     }
@@ -181,6 +185,12 @@ impl Instruction {
             Stq(rd, rs, rt, off9) => {
                 asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(0))?
             }
+            CsrR(rd, rs, uimm) => {
+                asm.emit(Opcode::fixed(0x12) | rs | rs | uimm)?
+            },
+            CsrW(rd, rs, uimm) => {
+                asm.emit(Opcode::fixed(0x13) | rs | rs | uimm)?
+            },
         }
 
         Ok(())
