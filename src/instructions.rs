@@ -186,10 +186,10 @@ impl Instruction {
                 asm.emit(Opcode::fixed(0x1e) | rd | rs | rt | off9 | Uimm::<2>(0))?
             }
             CsrR(rd, rs, uimm) => {
-                asm.emit(Opcode::fixed(0x12) | rs | rs | uimm)?
+                asm.emit(Opcode::fixed(0x12) | rd | rs | uimm)?
             },
             CsrW(rd, rs, uimm) => {
-                asm.emit(Opcode::fixed(0x13) | rs | rs | uimm)?
+                asm.emit(Opcode::fixed(0x13) | rd | rs | uimm)?
             },
         }
 
