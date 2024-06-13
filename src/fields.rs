@@ -327,6 +327,25 @@ impl Bits for Jmpop {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
+pub enum Memop {
+    Qword,
+    UpperWord,
+    Dword,
+    LowerWord,
+}
+
+impl Bits for Memop {
+    fn bits(&self) -> u32 {
+        match *self {
+            Memop::Qword => 0b00,
+            Memop::UpperWord => 0b01,
+            Memop::Dword => 0b10,
+            Memop::LowerWord => 0b11,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct Label(pub String);
 
