@@ -259,6 +259,21 @@ mod tests {
     }
 
     #[test]
+    fn instruction_par_unkst() {
+        let instructions = Instruction::parse("unk.st 0x1e, r6, r5, 0x8, 0").unwrap();
+            assert_eq!(
+                instructions,
+                vec![Instruction::Unkst(
+                    Opcode::fixed(0x1e),
+                    "r6".parse().unwrap(),
+                    "r5".parse().unwrap(),
+                    StoreOff14(Uimm(2)),
+                    Uimm(0)
+                )]
+            )
+    }
+
+    #[test]
     fn instruction_parse_jump() {
         let instructions = Instruction::parse("jump foobar").unwrap();
         assert_eq!(
