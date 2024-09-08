@@ -7,6 +7,7 @@ use crate::fields::{Bits, Funct, Jmpop, Label, Memop, Off14, Off9, Opcode, Rd, R
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
     Label(Label),
+    Dword(Uimm<32>),
     Unki(Opcode, Rd, Rs, Uimm<16>),
     Unkr(Opcode, Rd, Rs, Rt, Uimm<11>),
     Unkst(Opcode, Rt, Rs, StoreOff14, Uimm<2>),
@@ -70,6 +71,7 @@ impl FromStr for Instruction {
 
         Ok(match cmd {
             "lbl" => params!(Label(0)),
+            "dword" => params!(Dword(0)),
             "unk.i" => params!(Unki(0, 1, 2, 3)),
             "unk.r" => params!(Unkr(0, 1, 2, 3, 4)),
             "unk.st" => params!(Unkst(0, 1, 2, 3, 4)),
@@ -127,6 +129,7 @@ impl Instruction {
 
         match self.clone() {
             Label(lbl) => asm.label(&lbl.0, asm.current_address())?,
+            Dword(dword) => asm.emit(dword)?,
             Unki(op, rd, rs, uimm) => asm.emit(op | rd | rs | uimm)?,
             Unkr(op, rd, rs, rt, uimm) => asm.emit(op | rd | rs | rt | uimm)?,
             Unkst(op, rt, rs, off, width) => asm.emit(op | rt | rs | off | width)?,
